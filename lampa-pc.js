@@ -1,92 +1,70 @@
 (function () {
     'use strict';
 
-    function initPCControls() {
-        if (window.pcControlsLoaded) return;
-        window.pcControlsLoaded = true;
+    function nukeLampaEngine() {
+        if (window.pcNukeLoaded) return;
+        window.pcNukeLoaded = true;
 
-        console.log('>>> Lampa PC Controls: Глобальная разблокировка скролла <<<');
+        console.log('>>> Lampa PC: Ядерный режим скролла активирован <<<');
 
-        // 1. УБИВАЕМ ВМЕШАТЕЛЬСТВО LAMPA В КОЛЕСИКО МЫШИ
-        const wheelEvents = ['wheel', 'mousewheel', 'DOMMouseScroll'];
-        wheelEvents.forEach(evt => {
-            window.addEventListener(evt, function(e) {
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-            }, { capture: true, passive: true });
-        });
+        // 1. Блокируем реакцию движка на колесико мыши
+        window.addEventListener('wheel', function(e) {
+            e.stopPropagation();
+        }, { capture: true });
 
-        // 2. МЫШЬ (Подсветка элементов при наведении)
-        $('body').on('mouseenter', '.focusable, .card, .button, .selector, .menu__item, .selectbox-item, .card-episode', function() {
+        // 2. ВЗАИМОДЕЙСТВИЕ С МЫШЬЮ
+        $('body').on('mouseenter', '.focusable, .card, .button, .selector, .menu__item', function() {
             $('.focus').removeClass('focus');
             $(this).addClass('focus');
         });
 
-        // 3. БАЗОВЫЕ ХОТКЕИ
-        window.addEventListener('keydown', function(e) {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            if (e.code === 'Escape') {
-                e.preventDefault();
-                if (window.Lampa && Lampa.Controller) Lampa.Controller.toggle('back');
-            }
-            if (e.code === 'Space') {
-                e.preventDefault();
-                if (window.Lampa && Lampa.Player && Lampa.Player.opened) Lampa.Player.playpause();
-            }
-        });
-
-        // 4. ПОЛНАЯ ПЕРЕРАБОТКА СКРОЛЛА ЧЕРЕЗ CSS
+        // 3. ТОТАЛЬНАЯ ПЕРЕПИСЬ CSS АРХИТЕКТУРЫ
         var css = `
-            /* --- ВЕРТИКАЛЬНЫЙ СКРОЛЛ (Главная, Меню, Настройки) --- */
-            .activity__body > div > .scroll:not(.scroll--horizontal),
-            .menu__case,
-            .settings__body,
-            .selectbox__body > .scroll:not(.scroll--horizontal) {
+            /* Снимаем жесткие замки по высоте со всей цепочки блоков Lampa */
+            html, body, #app, .wrap, .wrap__content, .activitys, .activity, .activity__body, .scroll:not(.scroll--horizontal) {
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+
+            /* Включаем системный скролл на уровне всего браузера */
+            body {
                 overflow-y: auto !important;
                 overflow-x: hidden !important;
             }
 
-            /* Разрешаем контенту вытянуться вниз на свою реальную высоту */
-            .activity__body > div > .scroll:not(.scroll--horizontal) > .scroll__content,
-            .menu__case > .menu__list,
-            .selectbox__body > .scroll:not(.scroll--horizontal) > .scroll__content {
-                height: max-content !important;
-                min-height: 100% !important;
-            }
-
-            /* Отключаем виртуальный сдвиг координат Lampa */
-            .activity__body > div > .scroll:not(.scroll--horizontal) > .scroll__content > .scroll__body,
-            .menu__case > .menu__list,
-            .selectbox__body > .scroll:not(.scroll--horizontal) > .scroll__content > .scroll__body {
+            /* Убиваем искусственный сдвиг координат */
+            .scroll__body {
                 transform: none !important;
                 transition: none !important;
+                position: static !important;
             }
 
-            /* --- ГОРИЗОНТАЛЬНЫЙ СКРОЛЛ (Карусели фильмов) --- */
-            /* Делаем их скроллируемыми мышкой/тачпадом по горизонтали */
+            /* Чиним горизонтальные строки фильмов (возвращаем их в ряд) */
             .scroll--horizontal {
                 overflow-x: auto !important;
                 overflow-y: hidden !important;
-                padding-bottom: 8px !important; /* Место под ползунок */
+                width: 100% !important;
+                display: block !important;
+                white-space: nowrap !important;
+                padding-bottom: 10px !important;
             }
-            
-            .scroll--horizontal > .scroll__content > .scroll__body {
-                transform: none !important;
-                transition: none !important;
-                display: flex !important;
-                width: max-content !important;
+            .scroll--horizontal .scroll__content, 
+            .scroll--horizontal .scroll__body {
+                display: inline-flex !important;
+                width: auto !important;
             }
 
-            /* --- ВНЕШНИЙ ВИД ПОЛЗУНКОВ И КУРСОРОВ --- */
-            .scroll__track { display: none !important; } /* Прячем старый мусор */
+            /* Прячем мусор от старого движка */
+            .scroll__track { display: none !important; }
             
-            /* Рисуем красивые ПК-скроллбары (и вертикальные, и горизонтальные) */
-            ::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
-            ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+            /* Делаем классический ПК-ползунок */
+            ::-webkit-scrollbar { width: 12px; height: 12px; background: transparent; }
+            ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 6px; border: 2px solid #1d1f20; }
             ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
 
             body, html { cursor: default !important; }
-            .focusable, .card, .button, .menu__item, .selectbox-item, .selector, .card-episode { cursor: pointer !important; }
+            .focusable, .card, .button, .menu__item, .selector { cursor: pointer !important; }
         `;
 
         var style = document.createElement('style');
@@ -95,14 +73,12 @@
         document.head.appendChild(style);
     }
 
-    function checkAppReady() {
-        if (window.appready) {
-            initPCControls();
-        } else {
-            setTimeout(checkAppReady, 500);
-        }
+    if (window.appready) {
+        nukeLampaEngine();
+    } else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') nukeLampaEngine();
+        });
     }
-
-    checkAppReady();
 
 })();
