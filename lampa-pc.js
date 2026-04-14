@@ -5,22 +5,21 @@
         if (window.pcControlsLoaded) return;
         window.pcControlsLoaded = true;
 
-        console.log('>>> Lampa PC Controls: Включен чистый нативный скролл <<<');
+        console.log('>>> Lampa PC Controls: Точечный фикс главного скролла <<<');
 
-        // 1. БЛОКИРОВКА ПУЛЬТА, НО РАЗРЕШЕНИЕ БРАУЗЕРНОГО СКРОЛЛА
+        // 1. Убиваем слушатели Lampa на колесико мыши
         window.addEventListener('wheel', function(e) {
-            // Убиваем слушатели Lampa, чтобы фокус не прыгал
             e.stopPropagation();
             e.stopImmediatePropagation();
-            // e.preventDefault() ЗДЕСЬ БОЛЬШЕ НЕТ, чтобы браузер мог крутить сам
         }, { capture: true, passive: true }); 
 
-        // 2. ВЗАИМОДЕЙСТВИЕ С МЫШЬЮ
+        // 2. Взаимодействие с мышью (подсветка при наведении)
         $('body').on('mouseenter', '.focusable, .card, .button, .selector, .menu__item, .settings__item', function() {
             $('.focus').removeClass('focus');
             $(this).addClass('focus');
         });
 
+        // Горячие клавиши
         window.addEventListener('keydown', function(e) {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             if (e.code === 'Escape') {
@@ -33,42 +32,35 @@
             }
         });
 
-        // 3. ЖЕСТКИЙ CSS-ПЕРЕХВАТ СКРОЛЛА
+        // 3. ХИРУРГИЧЕСКИЙ CSS-ПЕРЕХВАТ СКРОЛЛА
         var css = `
-            /* 1. Заставляем контейнеры скроллиться по-настоящему */
-            .scroll__body, .menu__body, .settings__body, .category-menu, .scrollable {
+            /* Включаем вертикальный скролл ТОЛЬКО для главных оболочек */
+            .activity__body > .scroll > .scroll__body,
+            .menu__body,
+            .settings__body,
+            .category-menu {
                 overflow-y: auto !important;
-                scroll-behavior: smooth !important;
+                overflow-x: hidden !important;
+                height: 100% !important;
             }
 
-            /* 2. УБИВАЕМ ДВИЖОК LAMPA */
-            /* Отключаем его попытки сдвигать контент невидимыми координатами */
-            .scroll__content, .menu__list, .settings__list, .category-menu__list {
+            /* Отключаем виртуальный сдвиг Lampa ТОЛЬКО для основного контента */
+            .activity__body > .scroll > .scroll__body > .scroll__content,
+            .menu__body > .menu__list,
+            .settings__body > .settings__list {
                 transform: none !important; 
                 transition: none !important;
             }
 
-            /* 3. Убираем старые ползунки и рисуем новые для ПК */
+            /* Прячем родные ползунки Lampa */
             .scroll__track { display: none !important; }
 
-            .scroll__body::-webkit-scrollbar, 
-            .menu__body::-webkit-scrollbar, 
-            .settings__body::-webkit-scrollbar { 
-                width: 8px; 
-                background: transparent; 
-            }
-            .scroll__body::-webkit-scrollbar-thumb,
-            .menu__body::-webkit-scrollbar-thumb,
-            .settings__body::-webkit-scrollbar-thumb { 
-                background: rgba(255, 255, 255, 0.2); 
-                border-radius: 4px; 
-            }
-            .scroll__body::-webkit-scrollbar-thumb:hover,
-            .menu__body::-webkit-scrollbar-thumb:hover,
-            .settings__body::-webkit-scrollbar-thumb:hover { 
-                background: rgba(255, 255, 255, 0.5); 
-            }
+            /* Рисуем свой красивый скроллбар для страницы */
+            ::-webkit-scrollbar { width: 8px; background: transparent; }
+            ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+            ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
 
+            /* Курсоры */
             body, html { cursor: default !important; }
             .focusable, .card, .button, .menu__item, .settings__item { cursor: pointer !important; }
         `;
@@ -89,4 +81,4 @@
 
     checkAppReady();
 
-})();
+})();ф
