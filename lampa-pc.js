@@ -1,74 +1,105 @@
 (function () {
     'use strict';
 
-    function initPCPlugin() {
+    function initPCControls() {
         // Защита от двойного запуска
-        if (window.pcPluginLoaded) return;
-        window.pcPluginLoaded = true;
+        if (window.pcControlsLoaded) return;
+        window.pcControlsLoaded = true;
 
-        console.log('>>> Lampa PC Plugin: Начинаю установку ПК-управления <<<');
+        console.log('>>> Lampa PC Controls: Запуск ядра управления <<<');
 
-        // 1. ПОДДЕРЖКА МЫШИ (Ховер)
+        // 1. ИСТИННЫЙ НАТИВНЫЙ СКРОЛЛ (Без смены фокуса)
+        // Перехватываем событие ДО того, как оно попадет в Lampa
+        window.addEventListener('wheel', function(e) {
+            // Блокируем логику пульта Lampa (фокус больше не прыгает)
+            e.stopPropagation();
+            
+            // Если пытаемся скроллить саму страницу (например, плеер), отменяем
+            if (document.body.classList.contains('player--open')) return;
+
+            // Ищем активный контейнер со списками (фильмы, меню, настройки)
+            let scrollBody = e.target.closest('.scroll__body');
+            if (!scrollBody) {
+                // Если мышка где-то сбоку, берем просто активный экран
+                scrollBody = document.querySelector('.activity--active .scroll__body');
+            }
+
+            if (scrollBody) {
+                // Принудительно прокручиваем сайт
+                scrollBody.scrollTop += e.deltaY;
+            }
+        }, true);
+
+        // 2. ВЗАИМОДЕЙСТВИЕ С МЫШЬЮ
+        // Элемент выделяется при наведении, но колесико мыши за него больше не цепляется
         $('body').on('mouseenter', '.focusable, .card, .button, .selector', function() {
             $('.focus').removeClass('focus');
             $(this).addClass('focus');
         });
 
-        // 2. ГОРЯЧИЕ КЛАВИШИ
+        // 3. БАЗОВЫЕ КНОПКИ УПРАВЛЕНИЯ
         window.addEventListener('keydown', function(e) {
+            // Не перехватываем кнопки, если ты печатаешь в поиске
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
             if (e.code === 'Escape') {
                 e.preventDefault();
+                // Шаг назад или закрытие окна
                 if (window.Lampa && Lampa.Controller) Lampa.Controller.toggle('back');
             }
             if (e.code === 'Space') {
                 e.preventDefault();
+                // Пауза/Плей, если открыт плеер
                 if (window.Lampa && Lampa.Player && Lampa.Player.opened) Lampa.Player.playpause();
             }
         });
 
-        // 3. СКРОЛЛ КОЛЕСИКОМ (Эмуляция D-pad)
-        let lastScrollTime = 0;
-        window.addEventListener('wheel', function(e) {
-            if (e.target.closest('.scrollable, .lampa-scroll-allowed, .layer--witsout-background')) return;
-            
-            e.preventDefault();
+        // 4. СТИЛИ ДЛЯ СКРОЛЛБАРА И КУРСОРА
+        var css = `
+            /* Включаем возможность нативной прокрутки */
+            .scroll__body {
+                overflow-y: auto !important;
+                scroll-behavior: auto !important;
+            }
 
-            let now = Date.now();
-            if (now - lastScrollTime < 150) return; // Защита от сумасшедшего скролла
-            lastScrollTime = now;
+            /* Прячем уродливую дефолтную полосу прокрутки Lampa */
+            .scroll__track { 
+                display: none !important; 
+            }
 
-            let keyCode = e.deltaY > 0 ? 40 : 38; // 40 - вниз, 38 - вверх
+            /* Рисуем свой минималистичный скроллбар для ПК */
+            .scroll__body::-webkit-scrollbar { 
+                width: 8px; 
+                background: transparent; 
+            }
+            .scroll__body::-webkit-scrollbar-thumb { 
+                background: rgba(255, 255, 255, 0.2); 
+                border-radius: 4px; 
+            }
+            .scroll__body::-webkit-scrollbar-thumb:hover { 
+                background: rgba(255, 255, 255, 0.5); 
+            }
 
-            // Создаем событие, которое Lampa воспримет как пульт
-            let keyboardEvent = new KeyboardEvent('keydown', {
-                bubbles: true, 
-                cancelable: true, 
-                keyCode: keyCode, 
-                which: keyCode
-            });
-            window.dispatchEvent(keyboardEvent);
-            
-            console.log('>>> Lampa PC Plugin: Колесико мыши -> Клавиша ' + keyCode);
-        }, { passive: false });
+            /* Убираем скрытие курсора мыши и меняем его на палец при наведении */
+            body, html { cursor: default !important; }
+            .focusable, .card, .button { cursor: pointer !important; }
+        `;
 
-        // 4. СТИЛИ (Курсор)
-        $('<style>body, html { cursor: default !important; } .focusable, .card, .button { cursor: pointer !important; }</style>').appendTo('head');
-
-        console.log('>>> Lampa PC Plugin: Успешно загружен и работает! <<<');
+        var style = document.createElement('style');
+        style.type = 'text/css';
+        style.innerHTML = css;
+        document.head.appendChild(style);
     }
 
-    // Жесткий контроль загрузки плагина
+    // Жесткий контроль запуска (ждем ядро Lampa)
     function checkAppReady() {
         if (window.appready) {
-            initPCPlugin();
+            initPCControls();
         } else {
             setTimeout(checkAppReady, 500);
         }
     }
 
-    // Запускаем проверку
     checkAppReady();
 
 })();
