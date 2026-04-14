@@ -72,16 +72,65 @@
             body, html { cursor: default !important; }
             /* Делаем "палец" при наведении на кликабельные элементы */
             .focusable, .card, .selector, .button { cursor: pointer !important; }
+            
+            /* Опционально: можно отключить стандартную желтую рамку фокуса, 
+               и сделать классическое ПК-выделение карточек (например, легкое осветление) */
+            /* .card.focus { border: none !important; transform: scale(1.05) !important; opacity: 0.8; }
+            */
         `;
         document.head.appendChild(style);
     }
 
-    // Запуск после загрузки ядра
+    (function () {
+    'use strict';
+
+    function initMouseScroll() {
+        console.log('Lampa PC Scroll: Перехват колесика мыши активирован');
+
+        let lastScrollTime = 0;
+        // Задержка в миллисекундах. Подбирается экспериментально. 
+        // 150-200 мс обычно хватает, чтобы скролл был плавным и по одному ряду за раз.
+        const scrollDelay = 150; 
+
+        window.addEventListener('wheel', function(e) {
+            // Если открыто окно с текстом (например, длинное описание фильма), 
+            // там нужен обычный скролл. Ищем класс scrollable или похожие.
+            const target = e.target.closest('.scrollable, .lampa-scroll-allowed');
+            if (target) return; // Пропускаем системный скролл
+
+            // Блокируем стандартную дерганую прокрутку браузера
+            e.preventDefault();
+
+            const now = Date.now();
+            // Если с прошлого скролла прошло меньше времени, чем scrollDelay — игнорируем
+            if (now - lastScrollTime < scrollDelay) return; 
+            lastScrollTime = now;
+
+            // Определяем, куда крутят колесико: вниз или вверх
+            const isScrollingDown = e.deltaY > 0;
+            
+            // Коды клавиш: 40 - стрелка вниз, 38 - стрелка вверх
+            const keyCode = isScrollingDown ? 40 : 38;
+
+            // Генерируем фейковое нажатие клавиши для ядра Lampa
+            let keyboardEvent = new KeyboardEvent('keydown', {
+                bubbles: true, 
+                cancelable: true, 
+                keyCode: keyCode, 
+                which: keyCode
+            });
+            
+            // Отправляем событие. Lampa поймает его и сама плавно сдвинет ряды (transform)
+            document.dispatchEvent(keyboardEvent);
+
+        }, { passive: false }); // passive: false обязательно, чтобы работал preventDefault()
+    }
+
     if (window.appready) {
-        initDesktopControls();
+        initMouseScroll();
     } else {
         Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') initDesktopControls();
+            if (e.type === 'ready') initMouseScroll();
         });
     }
 })();
