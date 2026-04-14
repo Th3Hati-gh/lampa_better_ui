@@ -5,21 +5,25 @@
         if (window.pcControlsLoaded) return;
         window.pcControlsLoaded = true;
 
-        console.log('>>> Lampa PC Controls: Точечный фикс главного скролла <<<');
+        console.log('>>> Lampa PC Controls: Ультимативный фикс скролла <<<');
 
-        // 1. Убиваем слушатели Lampa на колесико мыши
-        window.addEventListener('wheel', function(e) {
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-        }, { capture: true, passive: true }); 
+        // 1. БЛОКИРУЕМ ВСЕ ВОЗМОЖНЫЕ СОБЫТИЯ КОЛЕСИКА ОТ ДВИЖКА LAMPA
+        const wheelEvents = ['wheel', 'mousewheel', 'DOMMouseScroll'];
+        wheelEvents.forEach(evt => {
+            window.addEventListener(evt, function(e) {
+                // Жестко останавливаем передачу события внутрь Lampa
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            }, { capture: true, passive: true });
+        });
 
-        // 2. Взаимодействие с мышью (подсветка при наведении)
-        $('body').on('mouseenter', '.focusable, .card, .button, .selector, .menu__item, .settings__item', function() {
+        // 2. ВЗАИМОДЕЙСТВИЕ С МЫШЬЮ (Курсор и выделение)
+        $('body').on('mouseenter', '.focusable, .card, .button, .selector, .menu__item, .selectbox-item, .card-episode', function() {
             $('.focus').removeClass('focus');
             $(this).addClass('focus');
         });
 
-        // Горячие клавиши
+        // 3. ГОРЯЧИЕ КЛАВИШИ
         window.addEventListener('keydown', function(e) {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             if (e.code === 'Escape') {
@@ -32,37 +36,41 @@
             }
         });
 
-        // 3. ХИРУРГИЧЕСКИЙ CSS-ПЕРЕХВАТ СКРОЛЛА
+        // 4. CSS ДЛЯ НАСТОЯЩЕГО БРАУЗЕРНОГО СКРОЛЛА
         var css = `
-            /* Включаем вертикальный скролл ТОЛЬКО для главных оболочек */
-            .activity__body > .scroll > .scroll__body,
-            .menu__body,
-            .settings__body,
-            .category-menu {
+            /* Включаем нативный скролл для всех вертикальных списков */
+            .scroll:not(.scroll--horizontal) {
                 overflow-y: auto !important;
                 overflow-x: hidden !important;
-                height: 100% !important;
+                scroll-behavior: smooth !important;
             }
 
-            /* Отключаем виртуальный сдвиг Lampa ТОЛЬКО для основного контента */
-            .activity__body > .scroll > .scroll__body > .scroll__content,
-            .menu__body > .menu__list,
-            .settings__body > .settings__list {
+            /* Заставляем внутренние контейнеры растягиваться по высоте контента */
+            .scroll:not(.scroll--horizontal) > .scroll__content {
+                height: max-content !important;
+                min-height: 100% !important;
+                overflow: visible !important;
+            }
+
+            /* Намертво отключаем виртуальный сдвиг Lampa */
+            .scroll:not(.scroll--horizontal) > .scroll__content > .scroll__body {
                 transform: none !important; 
                 transition: none !important;
+                position: static !important;
+                padding-bottom: 50px !important; /* Отступ внизу, чтобы ничего не обрезалось */
             }
 
-            /* Прячем родные ползунки Lampa */
+            /* Прячем старые фейковые ползунки Lampa */
             .scroll__track { display: none !important; }
 
-            /* Рисуем свой красивый скроллбар для страницы */
+            /* Рисуем аккуратный ПК-скроллбар */
             ::-webkit-scrollbar { width: 8px; background: transparent; }
             ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
             ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
 
-            /* Курсоры */
+            /* Возвращаем стандартный курсор ПК */
             body, html { cursor: default !important; }
-            .focusable, .card, .button, .menu__item, .settings__item { cursor: pointer !important; }
+            .focusable, .card, .button, .menu__item, .selectbox-item, .selector, .card-episode { cursor: pointer !important; }
         `;
 
         var style = document.createElement('style');
@@ -81,4 +89,4 @@
 
     checkAppReady();
 
-})();ф
+})();
