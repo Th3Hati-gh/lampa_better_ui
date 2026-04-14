@@ -5,18 +5,39 @@
         if (window.pcControlsLoaded) return;
         window.pcControlsLoaded = true;
 
-        console.log('>>> Lampa PC Controls: Глобальная разблокировка скролла <<<');
+        console.log('>>> Lampa PC Controls: Скролл со скоростью света <<<');
 
-        // 1. УБИВАЕМ ВМЕШАТЕЛЬСТВО LAMPA В КОЛЕСИКО МЫШИ
+        // --- НАСТРОЙКИ СКОРОСТИ ---
+        // Можешь менять эти цифры. Чем больше, тем быстрее крутится страница.
+        const SCROLL_SPEED_VERTICAL = 3.5; 
+        const SCROLL_SPEED_HORIZONTAL = 2.5; 
+
+        // 1. УМНЫЙ ПЕРЕХВАТ И УСКОРЕНИЕ СКРОЛЛА
         const wheelEvents = ['wheel', 'mousewheel', 'DOMMouseScroll'];
         wheelEvents.forEach(evt => {
             window.addEventListener(evt, function(e) {
                 e.stopPropagation();
                 e.stopImmediatePropagation();
-            }, { capture: true, passive: true });
+
+                // Ищем горизонтальную карусель под курсором
+                let horizontalTarget = e.target.closest('.scroll--horizontal');
+                // Ищем вертикальный контейнер
+                let verticalTarget = e.target.closest('.activity__body > div > .scroll:not(.scroll--horizontal), .menu__case, .settings__body, .selectbox__body > .scroll:not(.scroll--horizontal)');
+
+                if (horizontalTarget) {
+                    // Ускоряем карусель и позволяем крутить ее обычным колесиком (без Shift)
+                    e.preventDefault(); 
+                    let delta = (e.deltaX !== 0 ? e.deltaX : e.deltaY);
+                    horizontalTarget.scrollLeft += delta * SCROLL_SPEED_HORIZONTAL;
+                } else if (verticalTarget) {
+                    // Ускоряем вертикальный скролл сайта
+                    e.preventDefault();
+                    verticalTarget.scrollTop += e.deltaY * SCROLL_SPEED_VERTICAL;
+                }
+            }, { capture: true, passive: false }); // passive: false нужен, чтобы отключить медленный системный скролл
         });
 
-        // 2. МЫШЬ (Подсветка элементов при наведении)
+        // 2. ВЗАИМОДЕЙСТВИЕ С МЫШЬЮ
         $('body').on('mouseenter', '.focusable, .card, .button, .selector, .menu__item, .selectbox-item, .card-episode', function() {
             $('.focus').removeClass('focus');
             $(this).addClass('focus');
@@ -35,9 +56,8 @@
             }
         });
 
-        // 4. ПОЛНАЯ ПЕРЕРАБОТКА СКРОЛЛА ЧЕРЕЗ CSS
+        // 4. CSS (Убран scroll-behavior: smooth, чтобы не было лагов при ручном ускорении)
         var css = `
-            /* --- ВЕРТИКАЛЬНЫЙ СКРОЛЛ (Главная, Меню, Настройки) --- */
             .activity__body > div > .scroll:not(.scroll--horizontal),
             .menu__case,
             .settings__body,
@@ -45,50 +65,36 @@
                 overflow-y: auto !important;
                 overflow-x: hidden !important;
             }
-
-            /* Разрешаем контенту вытянуться вниз на свою реальную высоту */
             .activity__body > div > .scroll:not(.scroll--horizontal) > .scroll__content,
             .menu__case > .menu__list,
             .selectbox__body > .scroll:not(.scroll--horizontal) > .scroll__content {
                 height: max-content !important;
                 min-height: 100% !important;
             }
-
-            /* Отключаем виртуальный сдвиг координат Lampa */
             .activity__body > div > .scroll:not(.scroll--horizontal) > .scroll__content > .scroll__body,
             .menu__case > .menu__list,
             .selectbox__body > .scroll:not(.scroll--horizontal) > .scroll__content > .scroll__body {
                 transform: none !important;
                 transition: none !important;
             }
-
-            /* --- ГОРИЗОНТАЛЬНЫЙ СКРОЛЛ (Карусели фильмов) --- */
-            /* Делаем их скроллируемыми мышкой/тачпадом по горизонтали */
             .scroll--horizontal {
                 overflow-x: auto !important;
                 overflow-y: hidden !important;
-                padding-bottom: 8px !important; /* Место под ползунок */
+                padding-bottom: 8px !important;
             }
-            
             .scroll--horizontal > .scroll__content > .scroll__body {
                 transform: none !important;
                 transition: none !important;
                 display: flex !important;
                 width: max-content !important;
             }
-
-            /* --- ВНЕШНИЙ ВИД ПОЛЗУНКОВ И КУРСОРОВ --- */
-            .scroll__track { display: none !important; } /* Прячем старый мусор */
-            
-            /* Рисуем красивые ПК-скроллбары (и вертикальные, и горизонтальные) */
+            .scroll__track { display: none !important; }
             ::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
             ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
             ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
-
             body, html { cursor: default !important; }
             .focusable, .card, .button, .menu__item, .selectbox-item, .selector, .card-episode { cursor: pointer !important; }
         `;
-
         var style = document.createElement('style');
         style.type = 'text/css';
         style.innerHTML = css;
