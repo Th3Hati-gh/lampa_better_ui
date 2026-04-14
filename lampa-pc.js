@@ -72,11 +72,6 @@
             body, html { cursor: default !important; }
             /* Делаем "палец" при наведении на кликабельные элементы */
             .focusable, .card, .selector, .button { cursor: pointer !important; }
-            
-            /* Опционально: можно отключить стандартную желтую рамку фокуса, 
-               и сделать классическое ПК-выделение карточек (например, легкое осветление) */
-            /* .card.focus { border: none !important; transform: scale(1.05) !important; opacity: 0.8; }
-            */
         `;
         document.head.appendChild(style);
     }
