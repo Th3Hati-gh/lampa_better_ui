@@ -2,87 +2,92 @@
     'use strict';
 
     function initPCControls() {
-        // Защита от двойного запуска
         if (window.pcControlsLoaded) return;
         window.pcControlsLoaded = true;
 
-        console.log('>>> Lampa PC Controls: Запуск ядра управления <<<');
+        console.log('>>> Lampa PC Controls: Агрессивный перехват скролла запущен <<<');
 
-        // 1. ИСТИННЫЙ НАТИВНЫЙ СКРОЛЛ (Без смены фокуса)
-        // Перехватываем событие ДО того, как оно попадет в Lampa
+        // 1. ТОТАЛЬНЫЙ ПЕРЕХВАТ КОЛЕСИКА (Убиваем пульт везде)
         window.addEventListener('wheel', function(e) {
-            // Блокируем логику пульта Lampa (фокус больше не прыгает)
+            // Жестко блокируем ВСЕ обработчики Lampa на колесико
             e.stopPropagation();
+            e.stopImmediatePropagation();
             
-            // Если пытаемся скроллить саму страницу (например, плеер), отменяем
+            // Пропускаем, если открыт плеер (там своя громкость/перемотка)
             if (document.body.classList.contains('player--open')) return;
 
-            // Ищем активный контейнер со списками (фильмы, меню, настройки)
-            let scrollBody = e.target.closest('.scroll__body');
-            if (!scrollBody) {
-                // Если мышка где-то сбоку, берем просто активный экран
-                scrollBody = document.querySelector('.activity--active .scroll__body');
+            // Определяем, над каким блоком сейчас находится курсор
+            // Добавлены классы меню, настроек и категорий
+            let scrollTarget = e.target.closest('.scroll__body, .menu__body, .settings__body, .category-menu');
+            
+            if (!scrollTarget) {
+                // Если курсор сбоку, крутим активный центральный экран
+                scrollTarget = document.querySelector('.activity--active .scroll__body, .activity--active .settings__body');
             }
 
-            if (scrollBody) {
-                // Принудительно прокручиваем сайт
-                scrollBody.scrollTop += e.deltaY;
+            if (scrollTarget) {
+                // Отключаем дефолтный скролл браузера, чтобы избежать дерганий
+                e.preventDefault();
+                // Плавно крутим нужный блок
+                scrollTarget.scrollTop += e.deltaY;
             }
-        }, true);
+        }, { capture: true, passive: false });
 
         // 2. ВЗАИМОДЕЙСТВИЕ С МЫШЬЮ
-        // Элемент выделяется при наведении, но колесико мыши за него больше не цепляется
-        $('body').on('mouseenter', '.focusable, .card, .button, .selector', function() {
+        $('body').on('mouseenter', '.focusable, .card, .button, .selector, .menu__item, .settings__item', function() {
             $('.focus').removeClass('focus');
             $(this).addClass('focus');
         });
 
         // 3. БАЗОВЫЕ КНОПКИ УПРАВЛЕНИЯ
         window.addEventListener('keydown', function(e) {
-            // Не перехватываем кнопки, если ты печатаешь в поиске
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
             if (e.code === 'Escape') {
                 e.preventDefault();
-                // Шаг назад или закрытие окна
                 if (window.Lampa && Lampa.Controller) Lampa.Controller.toggle('back');
             }
             if (e.code === 'Space') {
                 e.preventDefault();
-                // Пауза/Плей, если открыт плеер
                 if (window.Lampa && Lampa.Player && Lampa.Player.opened) Lampa.Player.playpause();
             }
         });
 
-        // 4. СТИЛИ ДЛЯ СКРОЛЛБАРА И КУРСОРА
+        // 4. СТИЛИ (Нативный скролл для ВСЕХ блоков)
         var css = `
-            /* Включаем возможность нативной прокрутки */
-            .scroll__body {
+            /* Принудительно включаем нативный скролл для списков, меню и настроек */
+            .scroll__body, .menu__body, .settings__body, .category-menu {
                 overflow-y: auto !important;
                 scroll-behavior: auto !important;
             }
 
-            /* Прячем уродливую дефолтную полосу прокрутки Lampa */
+            /* Прячем уродливые ползунки Lampa */
             .scroll__track { 
                 display: none !important; 
             }
 
-            /* Рисуем свой минималистичный скроллбар для ПК */
-            .scroll__body::-webkit-scrollbar { 
+            /* Рисуем свой красивый скроллбар */
+            .scroll__body::-webkit-scrollbar, 
+            .menu__body::-webkit-scrollbar, 
+            .settings__body::-webkit-scrollbar { 
                 width: 8px; 
                 background: transparent; 
             }
-            .scroll__body::-webkit-scrollbar-thumb { 
+            .scroll__body::-webkit-scrollbar-thumb,
+            .menu__body::-webkit-scrollbar-thumb,
+            .settings__body::-webkit-scrollbar-thumb { 
                 background: rgba(255, 255, 255, 0.2); 
                 border-radius: 4px; 
             }
-            .scroll__body::-webkit-scrollbar-thumb:hover { 
+            .scroll__body::-webkit-scrollbar-thumb:hover,
+            .menu__body::-webkit-scrollbar-thumb:hover,
+            .settings__body::-webkit-scrollbar-thumb:hover { 
                 background: rgba(255, 255, 255, 0.5); 
             }
 
-            /* Убираем скрытие курсора мыши и меняем его на палец при наведении */
+            /* Курсоры */
             body, html { cursor: default !important; }
-            .focusable, .card, .button { cursor: pointer !important; }
+            .focusable, .card, .button, .menu__item, .settings__item { cursor: pointer !important; }
         `;
 
         var style = document.createElement('style');
@@ -91,7 +96,6 @@
         document.head.appendChild(style);
     }
 
-    // Жесткий контроль запуска (ждем ядро Lampa)
     function checkAppReady() {
         if (window.appready) {
             initPCControls();
