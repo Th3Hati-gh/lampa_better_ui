@@ -10,7 +10,6 @@
         // --- НАСТРОЙКИ СКОРОСТИ ---
         // Можешь менять эти цифры. Чем больше, тем быстрее крутится страница.
         const SCROLL_SPEED_VERTICAL = 3.5; 
-        const SCROLL_SPEED_HORIZONTAL = 2.5; 
 
         // 1. УМНЫЙ ПЕРЕХВАТ И УСКОРЕНИЕ СКРОЛЛА
         const wheelEvents = ['wheel', 'mousewheel', 'DOMMouseScroll'];
@@ -19,17 +18,11 @@
                 e.stopPropagation();
                 e.stopImmediatePropagation();
 
-                // Ищем горизонтальную карусель под курсором
-                let horizontalTarget = e.target.closest('.scroll--horizontal');
+
                 // Ищем вертикальный контейнер
                 let verticalTarget = e.target.closest('.activity__body > div > .scroll:not(.scroll--horizontal), .menu__case, .settings__body, .selectbox__body > .scroll:not(.scroll--horizontal)');
 
-                if (horizontalTarget) {
-                    // Ускоряем карусель и позволяем крутить ее обычным колесиком (без Shift)
-                    e.preventDefault(); 
-                    let delta = (e.deltaX !== 0 ? e.deltaX : e.deltaY);
-                    horizontalTarget.scrollLeft += delta * SCROLL_SPEED_HORIZONTAL;
-                } else if (verticalTarget) {
+                if (verticalTarget) {
                     // Ускоряем вертикальный скролл сайта
                     e.preventDefault();
                     verticalTarget.scrollTop += e.deltaY * SCROLL_SPEED_VERTICAL;
